@@ -274,20 +274,23 @@ define(function (require, exports) {
     var incrementHistory = {
         command: incrementHistoryCommand,
         reads: [locks.PS_DOC],
-        writes: [locks.JS_HISTORY, locks.JS_DOC]
+        writes: [locks.JS_HISTORY, locks.JS_DOC],
+        modal: true
     };
 
     var decrementHistory = {
         command: decrementHistoryCommand,
         reads: [locks.PS_DOC],
-        writes: [locks.JS_HISTORY, locks.JS_DOC]
+        writes: [locks.JS_HISTORY, locks.JS_DOC],
+        modal: true
     };
 
     var revertCurrentDocument = {
         command: revertCurrentDocumentCommand,
         reads: [locks.PS_DOC],
         writes: [locks.JS_HISTORY, locks.JS_DOC],
-        post: [layerActions._verifyLayerIndex]
+        post: [layerActions._verifyLayerIndex],
+        modal: true
     };
 
     var beforeStartup = {
@@ -299,7 +302,8 @@ define(function (require, exports) {
     var onReset = {
         command: onResetCommand,
         reads: [],
-        writes: []
+        writes: [],
+        modal: true
     };
 
     exports.queryCurrentHistory = queryCurrentHistory;
