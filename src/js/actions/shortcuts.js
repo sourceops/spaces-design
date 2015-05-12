@@ -183,25 +183,29 @@ define(function (require, exports) {
     var addShortcut = {
         command: addShortcutCommand,
         reads: [],
-        writes: [locks.PS_APP, locks.JS_SHORTCUT, locks.JS_POLICY]
+        writes: [locks.PS_APP, locks.JS_SHORTCUT, locks.JS_POLICY],
+        modal:true
     };
 
     var removeShortcut = {
         command: removeShortcutCommand,
         reads: [],
-        writes: [locks.PS_APP, locks.JS_SHORTCUT, locks.JS_POLICY]
+        writes: [locks.PS_APP, locks.JS_SHORTCUT, locks.JS_POLICY],
+        modal:true
     };
 
     var beforeStartup = {
         command: beforeStartupCommand,
         reads: [locks.JS_SHORTCUT],
-        writes: []
+        writes: [],
+        modal:true
     };
 
     var onReset = {
         command: onResetCommand,
         reads: [],
-        writes: []
+        writes: [],
+        modal:true
     };
 
     exports.addShortcut = addShortcut;

@@ -325,7 +325,8 @@ define(function (require, exports) {
     var onReset = {
         command: onResetCommand,
         reads: [],
-        writes: []
+        writes: [],
+        modal: true
     };
 
     exports.native = native;

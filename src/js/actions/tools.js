@@ -377,13 +377,15 @@ define(function (require, exports) {
         command: resetSuperselectCommand,
         reads: [locks.JS_APP, locks.JS_TOOL, locks.JS_SHORTCUT, locks.PS_DOC, locks.JS_DOC],
         writes: [locks.PS_APP, locks.JS_POLICY, locks.PS_TOOL, locks.JS_TOOL, locks.JS_SHORTCUT,
-            locks.PS_DOC, locks.JS_DOC]
+            locks.PS_DOC, locks.JS_DOC],
+        modal: true
     };
 
     var installShapeDefaults = {
         command: installShapeDefaultsCommand,
         reads: [locks.PS_DOC, locks.JS_DOC],
         writes: [locks.PS_DOC, locks.JS_DOC]
+        modal: true
     };
 
     var beforeStartup = {

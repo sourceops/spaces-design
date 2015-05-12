@@ -67,7 +67,8 @@ define(function (require, exports) {
                 target: documentLib.referenceBy.id(documentID),
                 coalesce: !!coalesce,
                 suppressHistoryStateNotification: !!coalesce
-            }
+            },
+            canExecuteWhileModal : true
         };
     };
 
@@ -362,7 +363,8 @@ define(function (require, exports) {
     var setPostScript = {
         command: setPostScriptCommand,
         reads: [],
-        writes: [locks.PS_DOC, locks.JS_DOC]
+        writes: [locks.PS_DOC, locks.JS_DOC],
+        modal: true
     };
 
     /**
@@ -371,7 +373,8 @@ define(function (require, exports) {
     var setFace = {
         command: setFaceCommand,
         reads: [],
-        writes: [locks.PS_DOC, locks.JS_DOC]
+        writes: [locks.PS_DOC, locks.JS_DOC],
+        modal:true
     };
 
     /**
@@ -380,7 +383,8 @@ define(function (require, exports) {
     var setColor = {
         command: setColorCommand,
         reads: [],
-        writes: [locks.PS_DOC, locks.JS_DOC]
+        writes: [locks.PS_DOC, locks.JS_DOC],
+        modal:true
     };
 
     /**
@@ -389,7 +393,8 @@ define(function (require, exports) {
     var setSize = {
         command: setSizeCommand,
         reads: [],
-        writes: [locks.PS_DOC, locks.JS_DOC]
+        writes: [locks.PS_DOC, locks.JS_DOC],
+        modal:true
     };
 
     /**
@@ -398,7 +403,8 @@ define(function (require, exports) {
     var setTracking = {
         command: setTrackingCommand,
         reads: [],
-        writes: [locks.PS_DOC, locks.JS_DOC]
+        writes: [locks.PS_DOC, locks.JS_DOC],
+        modal:true
     };
 
     /**
@@ -407,7 +413,8 @@ define(function (require, exports) {
     var setLeading = {
         command: setLeadingCommand,
         reads: [],
-        writes: [locks.PS_DOC, locks.JS_DOC]
+        writes: [locks.PS_DOC, locks.JS_DOC],
+        modal:true
     };
 
     /**
@@ -416,7 +423,8 @@ define(function (require, exports) {
     var setAlignment = {
         command: setAlignmentCommand,
         reads: [],
-        writes: [locks.PS_DOC, locks.JS_DOC]
+        writes: [locks.PS_DOC, locks.JS_DOC],
+        modal:true
     };
 
     /**

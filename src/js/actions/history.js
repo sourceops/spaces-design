@@ -261,7 +261,8 @@ define(function (require, exports) {
     var queryCurrentHistory = {
         command: queryCurrentHistoryCommand,
         reads: [locks.PS_DOC],
-        writes: [locks.JS_DOC]
+        writes: [locks.JS_DOC],
+        modal: true
     };
 
     var handleHistoryState = {

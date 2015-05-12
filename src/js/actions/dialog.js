@@ -108,7 +108,8 @@ define(function (require, exports) {
     var registerDialog = {
         command: registerDialogCommand,
         reads: [],
-        writes: [locks.JS_DIALOG]
+        writes: [locks.JS_DIALOG],
+        modal: true
     };
 
     /**
@@ -117,7 +118,8 @@ define(function (require, exports) {
     var deregisterDialog = {
         command: deregisterDialogCommand,
         reads: [],
-        writes: [locks.JS_DIALOG]
+        writes: [locks.JS_DIALOG],
+        modal: true
     };
 
     /**
@@ -126,7 +128,8 @@ define(function (require, exports) {
     var openDialog = {
         command: openDialogCommand,
         reads: [],
-        writes: [locks.JS_DIALOG]
+        writes: [locks.JS_DIALOG],
+        modal: true
     };
 
     /**
@@ -135,7 +138,8 @@ define(function (require, exports) {
     var closeDialog = {
         command: closeDialogCommand,
         reads: [],
-        writes: [locks.JS_DIALOG]
+        writes: [locks.JS_DIALOG],
+        modal: true
     };
 
     /**
@@ -144,7 +148,8 @@ define(function (require, exports) {
     var closeAllDialogs = {
         command: closeAllDialogsCommand,
         reads: [],
-        writes: [locks.JS_DIALOG]
+        writes: [locks.JS_DIALOG],
+        modal: true
     };
 
     exports.registerDialog = registerDialog;

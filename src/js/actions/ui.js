@@ -472,7 +472,8 @@ define(function (require, exports) {
     var updatePanelSizes = {
         command: updatePanelSizesCommand,
         reads: [locks.JS_APP],
-        writes: [locks.JS_UI]
+        writes: [locks.JS_UI],
+        modal: true
     };
 
     /**
@@ -483,7 +484,8 @@ define(function (require, exports) {
     var updateToolbarWidth = {
         command: updateToolbarWidthCommand,
         reads: [locks.JS_APP],
-        writes: [locks.JS_UI]
+        writes: [locks.JS_UI],
+        modal: true
     };
 
     /** 
@@ -529,19 +531,22 @@ define(function (require, exports) {
     var beforeStartup = {
         command: beforeStartupCommand,
         reads: [],
-        writes: [locks.JS_UI, locks.PS_APP]
+        writes: [locks.JS_UI, locks.PS_APP],
+        modal: true
     };
 
     var afterStartup = {
         command: afterStartupCommand,
         reads: [locks.PS_APP, locks.JS_DOC],
-        writes: [locks.JS_UI]
+        writes: [locks.JS_UI],
+        modal: true
     };
 
     var onReset = {
         command: onResetCommand,
         reads: [],
-        writes: []
+        writes: [],
+        modal: true
     };
 
     

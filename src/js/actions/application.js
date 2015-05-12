@@ -102,6 +102,7 @@ define(function (require, exports) {
     };
 
     exports.hostVersion = hostVersion;
+
     exports.updateRecentFiles = updateRecentFiles;
 
     exports.afterStartup = afterStartup;
