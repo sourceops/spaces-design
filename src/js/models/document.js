@@ -26,7 +26,7 @@ define(function (require, exports, module) {
 
     var Immutable = require("immutable");
 
-    var object = require("js/util/object"),
+    var cache = require("js/util/cache"),
         LayerStructure = require("./layerstructure"),
         Bounds = require("./bounds");
 
@@ -94,7 +94,7 @@ define(function (require, exports, module) {
         format: null
     });
 
-    Object.defineProperties(Document.prototype, object.cachedGetSpecs({
+    cache.defineDerivedProperties(Document.prototype, {
         /**
          * @type {boolean} Indicates whether there are features in the document
          *  that are currently unsupported.
@@ -106,7 +106,7 @@ define(function (require, exports, module) {
 
             return this.layers.unsupported;
         }
-    }));
+    });
 
     /**
      * Construct a new document model from a Photoshop document descriptor and

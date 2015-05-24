@@ -33,8 +33,8 @@ define(function (require, exports, module) {
         Stroke = require("./stroke"),
         Fill = require("./fill");
 
-    var objUtil = require("js/util/object"),
-        collection = require("js/util/collection"),
+    var collection = require("js/util/collection"),
+        cache = require("js/util/cache"),
         log = require("js/util/log");
 
     /**
@@ -134,13 +134,18 @@ define(function (require, exports, module) {
         return selectableLayers;
     };
 
-    Object.defineProperties(LayerStructure.prototype, objUtil.cachedGetSpecs({
+    cache.defineDerivedProperties(LayerStructure.prototype, {
         /**
          * @private
          * @type {{nodes: Immutable.Map.<number, LayerNode>, roots: Immutable.List.<LayerNode>}}
          */
-        "_nodeInfo": function () {
-            return LayerNode.fromLayers(this.all);
+        "_nodeInfo": {
+            get: function () {
+                return LayerNode.fromLayers(this.all);
+            },
+            validate: function (next) {
+                return Immutable.is(this.index, next.index);
+            }
         },
 
         /**
@@ -148,8 +153,13 @@ define(function (require, exports, module) {
          *
          * @type {Immutable.Map.<number, LayerNode>}
          */
-        "nodes": function () {
-            return this._nodeInfo.nodes;
+        "nodes": {
+            get: function () {
+                return this._nodeInfo.nodes;
+            },
+            validate: function (next) {
+                return Immutable.is(this.index, next.index);
+            }
         },
 
         /**
@@ -157,30 +167,45 @@ define(function (require, exports, module) {
          * 
          * @type {Immutable.List.<LayerNode>}
          */
-        "roots": function () {
-            return this._nodeInfo.roots;
+        "roots": {
+            get: function () {
+                return this._nodeInfo.roots;
+            },
+            validate: function (next) {
+                return Immutable.is(this.index, next.index);
+            }
         },
 
         /**
          * @type {boolean} Indicates whether there are features in the document
          *  that are currently unsupported.
          */
-        "unsupported": function () {
-            return this.layers.some(function (layer) {
-                return layer.unsupported;
-            });
+        "unsupported": {
+            get: function () {
+                return this.layers.some(function (layer) {
+                    return layer.unsupported;
+                });
+            },
+            validate: function (next) {
+                return Immutable.is(this.layers, next.layers);
+            }
         },
 
         /**
          * Mapping from layer IDs to indices.
          * @type {Immutable.Map.<number, number>}
          */
-        "reverseIndex": function () {
-            var reverseIndex = this.index.reduce(function (reverseIndex, layerID, i) {
-                return reverseIndex.set(layerID, i + 1);
-            }, new Map());
+        "reverseIndex": {
+            get: function () {
+                var reverseIndex = this.index.reduce(function (reverseIndex, layerID, i) {
+                    return reverseIndex.set(layerID, i + 1);
+                }, new Map());
 
-            return Immutable.Map(reverseIndex);
+                return Immutable.Map(reverseIndex);
+            },
+            validate: function (next) {
+                return Immutable.is(this.index, next.index);
+            }
         },
 
         /**
@@ -195,11 +220,16 @@ define(function (require, exports, module) {
          * All non-endgroup layers
          * @type {Immutable.List.<Layer>}
          */
-        "allVisible": function () {
-            return this.all
-                .filterNot(function (layer) {
-                    return layer.kind === layer.layerKinds.GROUPEND;
-                });
+        "allVisible": {
+            get: function () {
+                return this.all
+                    .filterNot(function (layer) {
+                        return layer.kind === layer.layerKinds.GROUPEND;
+                    });
+            },
+            validate: function (next) {
+                return Immutable.is(this.index, next.index);
+            }
         },
 
         /**
@@ -335,10 +365,15 @@ define(function (require, exports, module) {
          *
          * @return {boolean} if any layers in an artboard
          */
-        "hasArtboard": function () {
-            return this.all.some(function (layer) {
-                return layer.isArtboard;
-            });
+        "hasArtboard": {
+            get: function () {
+                return this.all.some(function (layer) {
+                    return layer.isArtboard;
+                });
+            },
+            validate: function (next) {
+                return Immutable.is(this.layers, next.layers);
+            }
         },
 
         /**
@@ -413,7 +448,7 @@ define(function (require, exports, module) {
                         layer.kind !== layer.layerKinds.GROUP;
                 });
         }
-    }));
+    });
 
     /**
      * Get a Layer model by layer ID.
@@ -488,9 +523,11 @@ define(function (require, exports, module) {
      * @param {Layer} layer
      * @return {number}
      */
-    Object.defineProperty(LayerStructure.prototype, "maxDescendantDepth", objUtil.cachedLookupSpec(function (layer) {
+    cache.defineDerivedLookup(LayerStructure.prototype, "maxDescendantDepth", function (layer) {
         return this.descendants(layer).map(this.depth, this).max();
-    }));
+    }, function (next) {
+        return Immutable.is(this.index, next.index);
+    });
 
     /**
      * Find the children of the given layer.
@@ -498,7 +535,7 @@ define(function (require, exports, module) {
      * @param {Layer} layer
      * @return {?Immutable.List.<Layer>}
      */
-    Object.defineProperty(LayerStructure.prototype, "children", objUtil.cachedLookupSpec(function (layer) {
+    cache.defineDerivedLookup(LayerStructure.prototype, "children", function (layer) {
         var node = this.nodes.get(layer.id, null);
 
         if (node && node.children) {
@@ -508,7 +545,7 @@ define(function (require, exports, module) {
         } else {
             return Immutable.List();
         }
-    }));
+    });
 
     /**
      * Find all siblings of the given layer, including itself.
@@ -516,7 +553,7 @@ define(function (require, exports, module) {
      * @param {Layer} layer
      * @return {Immutable.List.<Layer>}
      */
-    Object.defineProperty(LayerStructure.prototype, "siblings", objUtil.cachedLookupSpec(function (layer) {
+    cache.defineDerivedLookup(LayerStructure.prototype, "siblings", function (layer) {
         var parent = this.parent(layer);
 
         if (parent) {
@@ -524,7 +561,7 @@ define(function (require, exports, module) {
         } else {
             return this.top;
         }
-    }));
+    });
 
     /**
      * Find all ancestors of the given layer, including itself.
@@ -532,10 +569,10 @@ define(function (require, exports, module) {
      * @param {Layer} layer
      * @return {?Immutable.List.<Layer>}
      */
-    Object.defineProperty(LayerStructure.prototype, "ancestors", objUtil.cachedLookupSpec(function (layer) {
+    cache.defineDerivedLookup(LayerStructure.prototype, "ancestors", function (layer) {
         return this.strictAncestors(layer)
             .push(layer);
-    }));
+    });
 
     /**
      * Find all ancestors of the given layer, excluding itself.
@@ -544,15 +581,14 @@ define(function (require, exports, module) {
      *
      * @return {?Immutable.List.<Layer>}
      */
-    Object.defineProperty(LayerStructure.prototype, "strictAncestors", objUtil.cachedLookupSpec(function (layer) {
-        var parent = this.parent(layer);
-
-        if (parent) {
-            return this.ancestors(parent);
+    cache.defineDerivedLookup(LayerStructure.prototype, "strictAncestors", function (layer) {
+        var node = this.nodes.get(layer.id);
+        if (node && node.strictAncestors) {
+            return node.strictAncestors.map(this.byID, this);
         } else {
             return Immutable.List();
         }
-    }));
+    });
 
     /**
      * Find all locked ancestors of the given layer, including itself.
@@ -560,11 +596,11 @@ define(function (require, exports, module) {
      * @param {Layer} layer
      * @return {Immutable.List.<Layer>}
      */
-    Object.defineProperty(LayerStructure.prototype, "lockedAncestors", objUtil.cachedLookupSpec(function (layer) {
+    cache.defineDerivedLookup(LayerStructure.prototype, "lockedAncestors", function (layer) {
         return this.ancestors(layer).filter(function (layer) {
             return layer.locked;
         });
-    }));
+    });
 
     /**
      * Find all descendants of the given layer, including itself.
@@ -572,10 +608,10 @@ define(function (require, exports, module) {
      * @param {Layer} layer
      * @return {Immutable.List.<Layer>}
      */
-    Object.defineProperty(LayerStructure.prototype, "descendants", objUtil.cachedLookupSpec(function (layer) {
+    cache.defineDerivedLookup(LayerStructure.prototype, "descendants", function (layer) {
         return this.strictDescendants(layer)
             .push(layer);
-    }));
+    });
 
     /**
      * Find all descendants of the given layer, excluding itself.
@@ -583,25 +619,25 @@ define(function (require, exports, module) {
      * @param {Layer} layer 
      * @return {Immutable.List.<Layer>}
      */
-    Object.defineProperty(LayerStructure.prototype, "strictDescendants", objUtil.cachedLookupSpec(function (layer) {
-        return this.children(layer)
-            .toSeq()
-            .reverse()
-            .map(this.descendants, this)
-            .flatten(true)
-            .toList();
-    }));
+    cache.defineDerivedLookup(LayerStructure.prototype, "strictDescendants", function (layer) {
+        var node = this.nodes.get(layer.id);
+        if (node && node.strictDescendants) {
+            return node.strictDescendants.map(this.byID, this);
+        } else {
+            return Immutable.List();
+        }
+    });
     /**
      * Find all locked descendants of the given layer, including itself.
      *
      * @param {Layer} layer
      * @return {Immutable.List.<Layer>}
      */
-    Object.defineProperty(LayerStructure.prototype, "lockedDescendants", objUtil.cachedLookupSpec(function (layer) {
+    cache.defineDerivedLookup(LayerStructure.prototype, "lockedDescendants", function (layer) {
         return this.descendants(layer).filter(function (layer) {
             return layer.locked;
         });
-    }));
+    });
 
     /**
      * Determine whether some ancestors of the given layer are locked.
@@ -609,11 +645,11 @@ define(function (require, exports, module) {
      * @param {Layer} layer
      * @return {boolean}
      */
-    Object.defineProperty(LayerStructure.prototype, "hasLockedAncestor", objUtil.cachedLookupSpec(function (layer) {
+    cache.defineDerivedLookup(LayerStructure.prototype, "hasLockedAncestor", function (layer) {
         return this.ancestors(layer).some(function (layer) {
             return layer.locked;
         });
-    }));
+    });
 
     /**
      * Determine whether some descendants of the given layer are locked.
@@ -621,11 +657,11 @@ define(function (require, exports, module) {
      * @param {Layer} layer
      * @return {boolean}
      */
-    Object.defineProperty(LayerStructure.prototype, "hasLockedDescendant", objUtil.cachedLookupSpec(function (layer) {
+    cache.defineDerivedLookup(LayerStructure.prototype, "hasLockedDescendant", function (layer) {
         return this.descendants(layer).some(function (descendant) {
             return descendant.locked;
         }, this);
-    }));
+    });
 
     /**
      * Determine whether some ancestors of the given layer are selected.
@@ -633,12 +669,11 @@ define(function (require, exports, module) {
      * @param {Layer} layer
      * @return {boolean}
      */
-    Object.defineProperty(LayerStructure.prototype, "hasStrictSelectedAncestor",
-        objUtil.cachedLookupSpec(function (layer) {
+    cache.defineDerivedLookup(LayerStructure.prototype, "hasStrictSelectedAncestor", function (layer) {
         return this.strictAncestors(layer).some(function (layer) {
             return layer.selected;
         });
-    }));
+    });
 
     /**
      * Determine whether some ancestors of the given layer are selected.
@@ -646,9 +681,9 @@ define(function (require, exports, module) {
      * @param {Layer} layer
      * @return {boolean}
      */
-    Object.defineProperty(LayerStructure.prototype, "hasSelectedAncestor", objUtil.cachedLookupSpec(function (layer) {
+    cache.defineDerivedLookup(LayerStructure.prototype, "hasSelectedAncestor", function (layer) {
         return layer.selected || this.hasStrictSelectedAncestor(layer);
-    }));
+    });
 
     /**
      * Determine whether some ancestors of the given layer are invisible.
@@ -656,11 +691,11 @@ define(function (require, exports, module) {
      * @param {Layer} layer
      * @return {boolean}
      */
-    Object.defineProperty(LayerStructure.prototype, "hasInvisibleAncestor", objUtil.cachedLookupSpec(function (layer) {
+    cache.defineDerivedLookup(LayerStructure.prototype, "hasInvisibleAncestor", function (layer) {
         return this.ancestors(layer).some(function (layer) {
             return !layer.visible;
         });
-    }));
+    });
 
     /**
      * Determine whether a layer is an empty group or contains only adjustment layers
@@ -668,14 +703,16 @@ define(function (require, exports, module) {
      * @param {Layer} layer
      * @return {boolean}
      */
-    Object.defineProperty(LayerStructure.prototype, "isEmptyGroup", objUtil.cachedLookupSpec(function (layer) {
+    cache.defineDerivedLookup(LayerStructure.prototype, "isEmptyGroup", function (layer) {
         return layer.kind === layer.layerKinds.GROUP &&
             this.children(layer)
             .filterNot(function (layer) {
                 return layer.kind === layer.layerKinds.ADJUSTMENT || this.isEmptyGroup(layer);
             }, this)
             .size === 1; // only contains groupend
-    }));
+    }, function (next) {
+        return Immutable.is(this.index, next.index);
+    });
     
     /**
      * Calculate the child-encompassing bounds of the given layer. Returns null
@@ -684,7 +721,7 @@ define(function (require, exports, module) {
      * @param {Layer} layer
      * @return {?Bounds}
      */
-    Object.defineProperty(LayerStructure.prototype, "childBounds", objUtil.cachedLookupSpec(function (layer) {
+    cache.defineDerivedLookup(LayerStructure.prototype, "childBounds", function (layer) {
         switch (layer.kind) {
             case layer.layerKinds.GROUP:
                 if (layer.isArtboard) {
@@ -692,10 +729,12 @@ define(function (require, exports, module) {
                 }
 
                 var childBounds = this.children(layer)
+                    .toSeq()
                     .map(this.childBounds, this)
                     .filter(function (bounds) {
                         return bounds && bounds.area > 0;
-                    });
+                    })
+                    .toList();
 
                 return Bounds.union(childBounds);
             case layer.layerKinds.GROUPEND:
@@ -703,7 +742,7 @@ define(function (require, exports, module) {
             default:
                 return layer.bounds;
         }
-    }));
+    });
 
     /**
      * Create a new non-group layer model from a Photoshop layer descriptor and
@@ -777,7 +816,7 @@ define(function (require, exports, module) {
             index: nextStructure.index
         });
 
-        return nextStructure.merge(structureToMerge);
+        return cache.migrate(this, nextStructure.merge(structureToMerge));
     };
 
     /**
@@ -799,9 +838,9 @@ define(function (require, exports, module) {
             }, this);
         }.bind(this));
 
-        return this.mergeDeep({
+        return cache.migrate(this, this.mergeDeep({
             layers: nextLayers
-        });
+        }));
     };
 
     /**
@@ -830,10 +869,10 @@ define(function (require, exports, module) {
             }, this);
         }.bind(this));
 
-        return this.merge({
+        return cache.migrate(this, this.merge({
             layers: nextLayers,
             index: nextIndex
-        });
+        }));
     };
 
     /**
@@ -868,9 +907,9 @@ define(function (require, exports, module) {
             }, this);
         }.bind(this));
 
-        return this.mergeDeep({
+        return cache.migrate(this, this.mergeDeep({
             layers: nextLayers
-        });
+        }));
     };
 
     /**
@@ -887,9 +926,9 @@ define(function (require, exports, module) {
                 return layers;
             }.bind(this), new Map()));
 
-        return this.mergeDeep({
+        return cache.migrate(this, this.mergeDeep({
             layers: updatedLayers
-        });
+        }));
     };
 
     /**
@@ -929,7 +968,7 @@ define(function (require, exports, module) {
             return allBounds;
         }.bind(this), new Map()));
 
-        return this._updateBounds(allBounds);
+        return cache.migrate(this, this._updateBounds(allBounds));
     };
 
     /**
@@ -946,9 +985,9 @@ define(function (require, exports, module) {
                 }));
             }, new Map()));
 
-        return this.mergeDeep({
+        return cache.migrate(this, this.mergeDeep({
             layers: nextLayers
-        });
+        }));
     };
 
     /**
@@ -967,7 +1006,7 @@ define(function (require, exports, module) {
             return allBounds;
         }.bind(this), new Map()));
 
-        return this._updateBounds(allBounds);
+        return cache.migrate(this, this._updateBounds(allBounds));
     };
 
 
@@ -993,7 +1032,7 @@ define(function (require, exports, module) {
         }.bind(this), new Map()));
 
 
-        return this._updateBounds(allBounds);
+        return cache.migrate(this, this._updateBounds(allBounds));
     };
 
 
@@ -1017,7 +1056,7 @@ define(function (require, exports, module) {
             return allBounds;
         }.bind(this), new Map()));
 
-        return this._updateBounds(allBounds);
+        return cache.migrate(this, this._updateBounds(allBounds));
     };
 
     /**
@@ -1033,7 +1072,7 @@ define(function (require, exports, module) {
             return layer.set("selected", selected);
         });
 
-        return this.set("layers", updatedLayers);
+        return cache.migrate(this, this.set("layers", updatedLayers));
     };
 
     /**
@@ -1060,10 +1099,10 @@ define(function (require, exports, module) {
             updatedLayers = this.layers;
         }
 
-        return this.merge({
+        return cache.migrate(this, this.merge({
             index: updatedIndex,
             layers: updatedLayers
-        });
+        }));
     };
 
     /**
@@ -1082,9 +1121,9 @@ define(function (require, exports, module) {
             });
         });
 
-        return remainingLayerStructure.merge({
+        return cache.migrate(this, remainingLayerStructure.merge({
             layers: updatedLayers
-        });
+        }));
     };
 
     /**
@@ -1127,7 +1166,7 @@ define(function (require, exports, module) {
             .updateSelection(Immutable.Set.of(groupID))
             .updateOrder(newIDs);
 
-        return newLayerStructure;
+        return cache.migrate(this, newLayerStructure);
     };
 
     /**
@@ -1145,9 +1184,9 @@ define(function (require, exports, module) {
                 }));
             }, new Map()));
 
-        return this.mergeDeep({
+        return cache.migrate(this, this.mergeDeep({
             layers: nextLayers
-        });
+        }));
     };
 
     /**
@@ -1173,9 +1212,9 @@ define(function (require, exports, module) {
             return map.set(layerID, nextLayer);
         }, new Map(), this));
 
-        return this.mergeDeep({
+        return cache.migrate(this, this.mergeDeep({
             layers: nextLayers
-        });
+        }));
     };
 
     /**
@@ -1200,9 +1239,9 @@ define(function (require, exports, module) {
                 }));
             }, new Map(), this));
 
-        return this.mergeDeep({
+        return cache.migrate(this, this.mergeDeep({
             layers: nextLayers
-        });
+        }));
     };
 
     /**
@@ -1228,9 +1267,9 @@ define(function (require, exports, module) {
             return map.set(layerID, nextLayer);
         }, new Map(), this));
 
-        return this.mergeDeep({
+        return cache.migrate(this, this.mergeDeep({
             layers: nextLayers
-        });
+        }));
     };
 
     /**
@@ -1264,9 +1303,9 @@ define(function (require, exports, module) {
             }));
         }, new Map(), this));
 
-        return this.mergeDeep({
+        return cache.migrate(this, this.mergeDeep({
             layers: nextLayers
-        });
+        }));
     };
 
     /**
@@ -1308,9 +1347,9 @@ define(function (require, exports, module) {
             return map.set(layerID, nextLayer);
         }.bind(this), new Map()));
 
-        return this.mergeDeep({
+        return cache.migrate(this, this.mergeDeep({
             layers: nextLayers
-        });
+        }));
     };
 
     /**
@@ -1358,7 +1397,7 @@ define(function (require, exports, module) {
      * @return {LayerStructure}
      */
     LayerStructure.prototype.setCharacterStyleProperties = function (layerIDs, properties) {
-        return this._setTextStyleProperties("characterStyles", layerIDs, properties);
+        return cache.migrate(this, this._setTextStyleProperties("characterStyles", layerIDs, properties));
     };
 
     /**
@@ -1369,7 +1408,7 @@ define(function (require, exports, module) {
      * @return {LayerStructure}
      */
     LayerStructure.prototype.setParagraphStyleProperties = function (layerIDs, properties) {
-        return this._setTextStyleProperties("paragraphStyles", layerIDs, properties);
+        return cache.migrate(this, this._setTextStyleProperties("paragraphStyles", layerIDs, properties));
     };
 
     module.exports = LayerStructure;
