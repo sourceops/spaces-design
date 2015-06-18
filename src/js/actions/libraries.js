@@ -151,8 +151,8 @@ define(function (require, exports) {
     var afterStartupCommand = function () {
         var libraryCollection = CCLibraries.getLoadedCollections();
 
-        if (!libraryCollection) {
-            return Promise.resolve();
+        if (!libraryCollection || !libraryCollection[0]) {
+            return this.dispatchAsync(events.libraries.CONNECTION_FAILED);
         }
 
         // FIXME: Do we eventually need to handle other collections?
@@ -165,13 +165,13 @@ define(function (require, exports) {
     var beforeStartup = {
         command: beforeStartupCommand,
         reads: [],
-        writes: []
+        writes: [locks.JS_LIBRARIES]
     };
 
     var afterStartup = {
         command: afterStartupCommand,
-        reads: [],
-        writes: []
+        reads: [locks.JS_LIBRARIES],
+        writes: [locks.JS_LIBRARIES]
     };
 
     var prepareLibrary = {
