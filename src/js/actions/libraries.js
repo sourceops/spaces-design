@@ -43,7 +43,7 @@ define(function (require, exports) {
             currentLibrary = libStore.getCurrentLibrary(),
             currentLayers = currentDocument.layers.selected;
 
-        if (currentLayers.count() !== 1) {
+        if (!currentLibrary || currentLayers.count() !== 1) {
             return Promise.resolve();
         }
 
@@ -60,6 +60,7 @@ define(function (require, exports) {
         var exportObj = libraryAdapter.exportLayer("/tmp/", "/tmp/preview.png", currentLayer.name);
 
         return descriptor.playObject(exportObj)
+            .bind(this)
             .then(function (saveData) {
                 var path = saveData.in._path;
 
@@ -69,7 +70,32 @@ define(function (require, exports) {
             })
             .finally(function () {
                 currentLibrary.endOperation();
-            });
+            })
+            .then(function () {
+                var newRepresentation = newElement.getPrimaryRepresentation();
+                return Promise.fromNode(function (cb) {
+                    newRepresentation.getContentPath(cb);
+                })
+            })
+            .then(function (path) {
+                var createObj = libraryAdapter.createElement(currentDocument.id, currentLayer.id, newElement, path);
+                return descriptor.playObject(createObj);
+            })
+            .then(function () {
+                return this.transfer(prepareLibrary, currentLibrary.id);
+            })
+            .then(function () {
+                this.flux.actions.documents.updateDocument();
+            })
+            // .then(function () {
+            //     var payload = {
+            //         element: newElement,
+            //         document: currentDocument,
+            //         layers: currentLayer
+            //     };
+            //     // WE ONLY LINK IF THE LAYER WAS A SMART OBJECT
+            //     return this.dispatchAsync(events.libraries.ELEMENT_CREATED_AND_LINKED, payload);
+            // });
     };
 
     /**
@@ -177,13 +203,13 @@ define(function (require, exports) {
     var prepareLibrary = {
         command: prepareLibraryCommand,
         reads: [],
-        writes: []
+        writes: [locks.JS_LIBRARIES]
     };
 
     var createElementFromSelectedLayer = {
         command: createElementFromSelectedLayerCommand,
-        reads: [locks.JS_DOC],
-        writes: []
+        reads: [locks.JS_DOC, locks.JS_LIBRARIES],
+        writes: [locks.JS_LIBRARIES]
     };
 
     exports.beforeStartup = beforeStartup;
