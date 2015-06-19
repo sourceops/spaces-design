@@ -222,6 +222,7 @@ define(function (require, exports, module) {
     };
 
 
+    var _moveToArtboardListener = null
 
     /**
      * Handler for keydown events, installed when the tool is active.
@@ -268,6 +269,16 @@ define(function (require, exports, module) {
         }
 
         if (direction !== "") {
+            if (_moveToArtboardListener) {
+                descriptor.removeListener("moveToArtboard", _moveToArtboardListener);
+            }
+
+            _moveToArtboardListener = _.once(function () {
+                 this.flux.actions.layers.getLayerOrder(currentDocument, true);
+            }.bind(this));
+
+            descriptor.addListener("moveToArtboard", _moveToArtboardListener);
+
             var bigStep = detail.modifiers.shift;
             flux.actions.transform.nudgeLayersThrottled(direction, bigStep);
         }
