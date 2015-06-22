@@ -127,7 +127,7 @@ define(function (require, exports) {
      *
      * @param {number} id ID of library to prepare
      *
-     * @return {Immutable.List<Object>} [description]
+     * @return {Promise}
      */
     var prepareLibraryCommand = function (id) {
         var library = this.flux.store("library").getLibraryByID(id);
@@ -163,6 +163,48 @@ define(function (require, exports) {
         }).bind(this).then(function (itemList) {
             payload.elements = itemList;
             return this.dispatchAsync(events.libraries.LIBRARY_PREPARED, payload);
+        });
+    };
+
+    /**
+     * Creates a new library with the given name
+     *
+     * @param {string} name
+     * @return {Promise.<Library>} Resolves to the created library
+     */
+    var createLibraryCommand = function (name) {
+        var libStore = this.flux.store("library"),
+            libraryCollection = libStore.getLibraryCollection(),
+            newLibrary = libraryCollection.createLibrary(name);
+
+        return this.dispatchAsync(events.libraries.LIBRARY_CREATED, { library: newLibrary })
+            .then(function () {
+                return newLibrary;
+            });
+    };
+
+    /** 
+     * Removes the current library from the collection
+     *
+     * @return {Promise}
+     */
+    var removeCurrentLibraryCommand = function () {
+        var libStore = this.flux.store("library"),
+            libraryCollection = libStore.getLibraryCollection(),
+            currentLibrary = libStore.getCurrentLibrary();
+
+        if (!libraryCollection || !currentLibrary) {
+            return Promise.resolve();
+        }
+
+        var payload = {
+            id: currentLibrary.id
+        };
+
+        return Promise.fromNode(function (cb) {
+            libraryCollection.removeLibrary(currentLibrary, cb);
+        }).bind(this).then(function () {
+            this.dispatchAsync(events.libraries.LIBRARY_REMOVED, payload);
         });
     };
 
@@ -203,7 +245,8 @@ define(function (require, exports) {
 
         // FIXME: Do we eventually need to handle other collections?
         var payload = {
-            libraries: libraryCollection[0].libraries
+            libraries: libraryCollection[0].libraries,
+            collection: libraryCollection[0]
         };
         return this.dispatchAsync(events.libraries.LIBRARIES_UPDATED, payload);
     };
@@ -222,13 +265,25 @@ define(function (require, exports) {
 
     var prepareLibrary = {
         command: prepareLibraryCommand,
-        reads: [],
+        reads: [locks.CC_LIBRARIES],
         writes: [locks.JS_LIBRARIES]
+    };
+
+    var createLibrary = {
+        command: createLibraryCommand,
+        reads: [],
+        writes: [locks.CC_LIBRARIES, locks.JS_LIBRARIES]
+    };
+
+    var removeCurrentLibrary = {
+        command: removeCurrentLibraryCommand,
+        reads: [locks.CC_LIBRARIES, locks.JS_LIBRARIES],
+        writes: [locks.CC_LIBRARIES, locks.JS_LIBRARIES]
     };
 
     var createElementFromSelectedLayer = {
         command: createElementFromSelectedLayerCommand,
-        reads: [locks.JS_DOC, locks.JS_LIBRARIES],
+        reads: [locks.CC_LIBRARIES, locks.JS_DOC, locks.JS_LIBRARIES],
         writes: [locks.JS_LIBRARIES]
     };
 
@@ -240,7 +295,10 @@ define(function (require, exports) {
 
     exports.beforeStartup = beforeStartup;
     exports.afterStartup = afterStartup;
+    
     exports.prepareLibrary = prepareLibrary;
+    exports.createLibrary = createLibrary;
+    exports.removeCurrentLibrary = removeCurrentLibrary;
 
     exports.createElementFromSelectedLayer = createElementFromSelectedLayer;
     exports.createLayerFromElement = createLayerFromElement;
