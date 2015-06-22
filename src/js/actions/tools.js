@@ -228,7 +228,11 @@ define(function (require, exports) {
             return Promise.resolve();
         }
 
-        var selection = currentDocument.layers.selectedAreaBounds;
+        var targetLayers = currentDocument.layers.selected,
+            artboards = targetLayers.some(function (layer) {
+                return layer.isArtboard;
+            }),
+            selection = currentDocument.layers.selectedAreaBounds;
 
         if (!selection || selection.empty) {
             return Promise.resolve();
@@ -242,8 +246,10 @@ define(function (require, exports) {
             ),
             psSelectionWidth = psSelectionBR.x - psSelectionTL.x,
             psSelectionHeight = psSelectionBR.y - psSelectionTL.y,
+            // The resize rectangles are roughly 10 points radius
             inset = 10,
-            outset = 25;
+            // In case of artboards, we have no rotate, so we can stay within the border
+            outset = artboards ? inset : 25;
 
         var insidePolicy = new PointerEventPolicy(adapterUI.policyAction.NEVER_PROPAGATE,
                 adapterOS.eventKind.LEFT_MOUSE_DOWN,
@@ -371,6 +377,11 @@ define(function (require, exports) {
                         .then(function () {
                             this.dispatchAsync(events.ui.TOGGLE_OVERLAYS, { enabled: true });
                         });
+                }
+
+                // During artboard transforms, PS switches to artboard tool, so switch back to superselect
+                if (event.tool && event.tool.ID === "ArtT") {
+                    this.flux.actions.tools.resetSuperselect();
                 }
             }
         }.bind(this);
