@@ -384,7 +384,7 @@ define(function (require, exports) {
     var installShapeDefaults = {
         command: installShapeDefaultsCommand,
         reads: [locks.PS_DOC, locks.JS_DOC],
-        writes: [locks.PS_DOC, locks.JS_DOC]
+        writes: [locks.PS_DOC, locks.JS_DOC],
         modal: true
     };
 
